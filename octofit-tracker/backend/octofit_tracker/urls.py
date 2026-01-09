@@ -14,9 +14,14 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
+
+import os
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 from . import views
+
 
 router = DefaultRouter()
 router.register(r'users', views.UserViewSet, basename='user')
@@ -25,8 +30,29 @@ router.register(r'activities', views.ActivityViewSet, basename='activity')
 router.register(r'leaderboard', views.LeaderboardViewSet, basename='leaderboard')
 router.register(r'workouts', views.WorkoutViewSet, basename='workout')
 
+
+
+
+# Custom API root to return endpoint URLs with $CODESPACE_NAME env variable
+@csrf_exempt
+def api_root_with_codespace(request):
+    codespace_name = os.environ.get('CODESPACE_NAME')
+    if codespace_name:
+        base_url = f"https://{codespace_name}-8000.app.github.dev"
+    else:
+        base_url = "http://localhost:8000"
+    endpoints = {
+        "activities": f"{base_url}/api/activities/",
+        "teams": f"{base_url}/api/teams/",
+        "leaderboard": f"{base_url}/api/leaderboard/",
+        "workouts": f"{base_url}/api/workouts/",
+        "users": f"{base_url}/api/users/"
+    }
+    return JsonResponse({'api_endpoints': endpoints})
+
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', views.api_root, name='api-root'),
+    path('', api_root_with_codespace, name='api-root'),
+    path('api/', api_root_with_codespace, name='api-root-codespace'),
     path('api/', include(router.urls)),
 ]
